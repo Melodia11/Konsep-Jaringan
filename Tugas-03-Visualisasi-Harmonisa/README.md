@@ -1,0 +1,146 @@
+# TUGAS 03: VISUALISASI PENJUMLAHAN SINYAL HARMONISA (FOURIER SYNTHESIS)
+
+**Identitas Mahasiswa:**
+- **Nama:** Melodia Bunga Chantika
+- **NRP:** 3125600038
+- **Kelas:** 2 D4 Teknik Informatika A
+- **Mata Kuliah:** Konsep Jaringan
+- **Dosen Pengajar:** Dr. Ferry Astika Saputra, ST, M.Sc
+- **Institusi:** Politeknik Elektronika Negeri Surabaya (PENS) - 2026
+
+---
+
+## 1. Deskripsi Tugas
+Buat program visualisasi Python untuk mensimulasikan pembentukan gelombang kotak (*square wave*) dari penjumlahan sinyal sinus harmonisa ganjil ($n = 1, 3, 5, 7, 9, \dots$).
+
+---
+
+## 2. Landasan Teori Sintesis Deret Fourier
+
+Menurut analisis Fourier, gelombang periodik tak-sinusoidal (seperti gelombang kotak) dapat direpresentasikan sebagai penjumlahan tak hingga dari gelombang sinusoidal harmonisa:
+
+$$x(t) = \frac{4}{\pi} \sum_{k=1,3,5,\dots}^{\infty} \frac{1}{k} \sin(2\pi \cdot k \cdot f_0 \cdot t)$$
+
+- **Frekuensi Fundamental ($f_0$):** $1.0\text{ Hz}$.
+- **Komponen Harmonisa:** Hanya harmonisa ganjil ($n = 1, 3, 5, 7, 9$) yang memiliki amplitudo bukan nol ($A_n = \frac{4}{\pi \times n}$).
+- **Harmonisa Genap:** Memiliki amplitudo $0$.
+
+---
+
+## 3. Implementasi Kode Program Python
+
+Berkas kode dapat dijalankan langsung: [`fourier_synthesis.py`](./fourier_synthesis.py)
+
+```python
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
+import numpy as np
+
+# Parameter sinyal dasar
+f0 = 1.0  # Frekuensi fundamental dalam Hz
+t = np.linspace(0, 2, 1000)  # Rentang waktu 2 detik
+allowed_harmonics = list(
+    range(1, 11, 2)
+)  # Harmonisa ganjil hingga 10: [1, 3, 5, 7, 9]
+
+fig, (ax_time, ax_freq) = plt.subplots(2, 1, figsize=(9, 7))
+plt.subplots_adjust(left=0.1, bottom=0.22, hspace=0.4)
+
+
+def compute_fourier_series(max_h):
+  # Gelombang kotak dibentuk oleh harmonisa ganjil:
+  # sum((4 / (pi * n)) * sin(2 * pi * n * f0 * t))
+  wave = np.zeros_like(t)
+  all_n = np.arange(1, 11)  # Rentang 1 hingga 10
+  amplitudes = np.zeros(10)  # Ukuran array disesuaikan ke 10
+
+  for n in range(1, max_h + 1):
+    if n % 2 != 0:
+      amp = 4 / (np.pi * n)
+      wave += amp * np.sin(2 * np.pi * n * f0 * t)
+      amplitudes[n - 1] = amp
+    else:
+      amplitudes[n - 1] = 0.0
+
+  return wave, all_n, amplitudes
+
+
+# Tampilan awal pada harmonisa n = 1
+initial_h = 1
+wave, harms, amps = compute_fourier_series(initial_h)
+
+(line_time,) = ax_time.plot(
+    t, wave, color='royalblue', lw=2, label='Sinyal Sintesis'
+)
+ax_time.axhline(0, color='gray', linestyle='--', alpha=0.5)
+ax_time.set_ylim(-1.5, 1.5)
+ax_time.set_title(
+    f'Domain Waktu: Sintesis Menuju Gelombang Kotak (n = {initial_h})'
+)
+ax_time.set_xlabel('Waktu (detik)')
+ax_time.set_ylabel('Amplitudo')
+ax_time.grid(True, linestyle=':', alpha=0.6)
+ax_time.legend(loc='upper right')
+
+bars = ax_freq.bar(harms, amps, color='crimson', width=0.5, edgecolor='black')
+ax_freq.set_ylim(0, 1.5)
+ax_freq.set_xticks(harms)
+ax_freq.set_title('Domain Frekuensi: Spektrum Amplitudo Tiap Harmonisa')
+ax_freq.set_xlabel('Harmonisa ke-n')
+ax_freq.set_ylabel('Amplitudo')
+ax_freq.grid(True, axis='y', linestyle=':', alpha=0.6)
+
+# Penggeser interaktif (Slider)
+slider_ax = plt.axes([0.15, 0.08, 0.7, 0.04])
+slider = Slider(
+    slider_ax,
+    'Harmonisa',
+    valmin=1,
+    valmax=10,  # Maksimum harmonisa 10
+    valinit=initial_h,
+    valstep=allowed_harmonics,
+)
+
+
+def update(val):
+  current_h = int(slider.val)
+  new_wave, _, new_amps = compute_fourier_series(current_h)
+  line_time.set_ydata(new_wave)
+  ax_time.set_title(
+      f'Domain Waktu: Sintesis Menuju Gelombang Kotak (n = {current_h})'
+  )
+  for bar, amp in zip(bars, new_amps):
+    bar.set_height(amp)
+  fig.canvas.draw_idle()
+
+
+slider.on_changed(update)
+plt.show()
+```
+
+---
+
+## 4. Cara Menjalankan Program
+
+Pastikan pustaka Python telah terpasang:
+```bash
+pip install numpy matplotlib
+```
+
+Jalankan skrip simulasi:
+```bash
+python fourier_synthesis.py
+```
+
+---
+
+## 5. Analisis Hasil Simulasi
+
+1. **Domain Waktu (Grafik Atas):**
+   - Saat $n = 1$, sinyal berbentuk sinusoidal murni.
+   - Saat nilai slider dinaikkan ke $n = 3, 5, 7, 9$, kemiringan transisi sinyal menjadi semakin curam dan bagian puncak menjadi semakin datar.
+   - Tampak efek riak (*Gibbs Phenomenon*) di dekat sudut transisi yang menjadi ciri khas aproksimasi deret Fourier terpotong.
+2. **Domain Frekuensi (Grafik Bawah):**
+   - Diagram batang menunjukkan spektrum amplitudo diskret.
+   - Amplitudo menurun sebanding dengan faktor $\frac{1}{n}$ ($A_1 \approx 1.27$, $A_3 \approx 0.42$, $A_5 \approx 0.25$, dst.).
+   - Batang harmonisa genap ($n = 2, 4, 6, 8, 10$) bernilai nol, membuktikan sifat simetri separuh gelombang (*half-wave symmetry*) dari gelombang kotak.
